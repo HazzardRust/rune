@@ -565,6 +565,15 @@ impl El {
         }
         self
     }
+    /// A [`El::selection_group`] selection that ends inside this [`El::selectable`] text takes
+    /// all of it, as CSS's `user-select: all`: a drag across table cells highlights whole cells.
+    /// A selection inside this text alone stays as dragged.
+    pub fn select_whole(mut self, on: bool) -> Self {
+        if let Some(t) = &mut self.text && (on || t.cold.select_whole) {
+            t.cold.select_whole = on;
+        }
+        self
+    }
     /// How many newlines copying puts between this [`El::selectable`] text and the text copied
     /// before it, and the text after it, when a [`El::selection_group`] selection takes more than
     /// one: the larger of the two texts' asks, one by default. Two leaves a blank line, as a web

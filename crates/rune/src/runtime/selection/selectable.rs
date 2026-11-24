@@ -267,6 +267,11 @@ impl RuntimeCore {
         }
     }
 
+    /// Node `i`'s text takes all of itself as an end of a selection across texts ([`El::select_whole`]).
+    fn selects_whole(&self, i: usize) -> bool {
+        self.nodes[i].text.as_ref().is_some_and(|t| t.cold.select_whole)
+    }
+
     /// Every text the selection covers with its selected bytes, in tree order, none empty.
     pub(super) fn selection_ranges(&self) -> Vec<(usize, usize, usize)> {
         use virtual_selection::EndRef;
@@ -287,8 +292,8 @@ impl RuntimeCore {
         let Some(g) = self.live(g_path) else { return Vec::new() };
         if let (EndRef::Mounted(i0), EndRef::Mounted(i1)) = (first, last) {
             return (i0..=i1).filter(|&j| self.member(j, g)).filter_map(|j| {
-                let len = self.content_of(j).len();
-                let (a, b) = (if j == i0 { a.min(len) } else { 0 }, if j == i1 { b.min(len) } else { len });
+                let (len, whole) = (self.content_of(j).len(), self.selects_whole(j));
+                let (a, b) = (if j == i0 && !whole { a.min(len) } else { 0 }, if j == i1 && !whole { b.min(len) } else { len });
                 (a < b).then_some((j, a, b))
             }).collect();
         }
@@ -297,8 +302,8 @@ impl RuntimeCore {
             let end_j = EndRef::Mounted(j);
             let ord = self.tree_order(end_j);
             if ord < first_ord || ord > last_ord { return None; }
-            let len = self.content_of(j).len();
-            let (a, b) = (if end_j == first { a.min(len) } else { 0 }, if end_j == last { b.min(len) } else { len });
+            let (len, whole) = (self.content_of(j).len(), self.selects_whole(j));
+            let (a, b) = (if end_j == first && !whole { a.min(len) } else { 0 }, if end_j == last && !whole { b.min(len) } else { len });
             (a < b).then_some((j, a, b))
         }).collect()
     }

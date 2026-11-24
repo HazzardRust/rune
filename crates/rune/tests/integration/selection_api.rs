@@ -410,3 +410,59 @@ fn secure_text_is_never_selectable_or_copied() {
     rt.frame(1.0 / 60.0);
     assert_eq!(rt.selected_text().as_deref(), Some("public"));
 }
+
+#[test]
+fn an_end_text_with_select_whole_takes_its_whole_range_when_a_selection_spans_texts() {
+    struct W;
+    fn w_view(_: &W, _: &mut Cx<W>) -> El {
+        let style = TextStyle::new(14.0, 400.0).lh(20.0);
+        col().key("doc").w(300.0).gap(12.0).selection_group(true)
+            .child(text("alpha beta gamma").key("plain").font(style).w_full().selectable(true))
+            .child(text("delta epsilon zeta").key("whole").font(style).w_full().selectable(true).select_whole(true))
+    }
+    let mut rt = Runtime::new(W, w_view, (320.0, 120.0), Env::new(true, 2.0));
+    rt.frame(0.0);
+    let at = |rt: &Runtime<W>, key: &str| {
+        let e = rt.elements().into_iter().find(|e| e.key.as_deref() == Some(key)).unwrap_or_else(|| panic!("{key}"));
+        (e.rect[0] + 40.0, e.rect[1] + e.rect[3] / 2.0)
+    };
+    let drag = |rt: &mut Runtime<W>, (x0, y0): (f32, f32), (x1, y1): (f32, f32)| {
+        rt.pointer_move(x0, y0);
+        rt.pointer_down(x0, y0);
+        rt.frame(1.0 / 60.0);
+        for k in 1..=4 {
+            let f = k as f32 / 4.0;
+            rt.pointer_move(x0 + (x1 - x0) * f, y0 + (y1 - y0) * f);
+            rt.frame(1.0 / 60.0);
+        }
+        rt.pointer_up(x1, y1);
+        rt.frame(1.0 / 60.0);
+    };
+    let texts = |rt: &Runtime<W>| {
+        let sel = rt.selection().expect("a selection");
+        sel.texts().iter().map(|t| (t.key().unwrap_or_default().to_owned(), t.range(), t.len())).collect::<Vec<_>>()
+    };
+
+    // Mid first to mid second: the select_whole end takes (0, len), the plain end stays partial.
+    let (plain, whole) = (at(&rt, "plain"), at(&rt, "whole"));
+    drag(&mut rt, plain, whole);
+    let got = texts(&rt);
+    let [(k0, r0, n0), (k1, r1, n1)] = &got[..] else { panic!("{got:?}") };
+    assert_eq!((k0.as_str(), k1.as_str()), ("plain", "whole"), "{got:?}");
+    assert!(r0.start > 0 && r0.end == *n0, "the plain end stays partial: {got:?}");
+    assert_eq!(*r1, 0..*n1, "the select_whole end is whole: {got:?}");
+
+    // Backwards, from mid second to mid first: the same.
+    drag(&mut rt, whole, plain);
+    let got = texts(&rt);
+    let [(_, r0, n0), (_, r1, n1)] = &got[..] else { panic!("{got:?}") };
+    assert!(r0.start > 0 && r0.end == *n0, "{got:?}");
+    assert_eq!(*r1, 0..*n1, "{got:?}");
+
+    // Inside the select_whole text alone: as dragged.
+    drag(&mut rt, (whole.0 - 30.0, whole.1), whole);
+    let got = texts(&rt);
+    let [(k, r, n)] = &got[..] else { panic!("{got:?}") };
+    assert_eq!(k, "whole");
+    assert!(r.start > 0 && r.end < *n, "one text selects as dragged: {got:?}");
+}

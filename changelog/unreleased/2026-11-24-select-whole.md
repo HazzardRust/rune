@@ -1,0 +1,1 @@
+- `El::select_whole` makes a selectable text take all of itself when a selection across a group's texts ends inside it, as CSS's `user-select: all`; a selection inside that text alone stays as dragged. Markdown table cells use it, so a drag across cells highlights and copies whole cells.

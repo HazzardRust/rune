@@ -443,7 +443,9 @@ impl Renderer {
                     rich(inl.text.clone(), self.spans(inl, font))
                         .font(font)
                         .color(color)
-                        .align(align),
+                        .align(align)
+                        // A drag across cells highlights and copies whole cells.
+                        .select_whole(true),
                 )
                 .w_full();
             let content = super::bidi::directed(super::bidi::isolated(content, inl), dir);

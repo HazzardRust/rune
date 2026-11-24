@@ -97,6 +97,8 @@ pub(crate) struct TextCold {
     pub(crate) selection_style: Option<crate::SelectionStyle>,
     /// See [`El::uncopied`](crate::El::uncopied): byte ranges of `content`, sorted.
     pub(crate) uncopied: Vec<(u32, u32)>,
+    /// See [`El::select_whole`](crate::El::select_whole).
+    pub(crate) select_whole: bool,
     /// See [`El::copy_breaks`](crate::El::copy_breaks): newlines before and after it.
     pub(crate) copy_breaks: [u8; 2],
     /// See [`El::copy_prefix`](crate::El::copy_prefix).
@@ -134,6 +136,7 @@ impl Empty for TextCold {
         selection: crate::el::DEFAULT_SELECTION,
         selection_style: None,
         uncopied: Vec::new(),
+        select_whole: false,
         copy_breaks: [1, 1],
         copy_prefix: None,
         rings: Vec::new(),
